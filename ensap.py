@@ -4,8 +4,8 @@ import json
 import os.path
 import argparse
 import sys
+import re
 from datetime import date
-
 
 
 ####### change variables here, like URL, action URL, user, pass
@@ -18,7 +18,7 @@ username = ""
 password = ""
 
 #destination folder:
-download_folder = '/tmp'
+download_folder = '/home/user/download'
 
 # creating the date object of today's date
 todays_date = date.today()
@@ -85,9 +85,19 @@ def site_login():
     "Origin":https_base_url,
     "Referer":https_base_url + '/web/accueilnonconnecte'}
 
-    initRequest = s.post(InitUrl, headers=headers)
+    initRequest = s.post(InitUrl, headers=headers,data='{}')
     print("InitUrl HTTP code: {}".format(initRequest.status_code))
-    year_list = json.loads(initRequest.text)['listeAnneeRemuneration']
+
+    InitUrl = https_base_url + '/prive/listeranneeremunerationpaie/v1'
+    headers={"Content-Type":"application/json; charset=UTF-8",
+    "User-agent":useragent,
+    "Accept":"application/json, text/plain, */*",
+    "Host":base_url,
+    "Origin":https_base_url,
+    "Referer":https_base_url + '/web/accueilnonconnecte'}
+    initRequest = s.get(InitUrl, headers=headers)
+    print("InitUrl HTTP code: {}".format(initRequest.status_code))
+    year_list = json.loads(initRequest.text)['listeAnnee']
     print("Available years: {}".format(year_list))
 
     if choosen_year == 'all':
@@ -126,10 +136,11 @@ def site_browse(item_year):
 def site_download(item_doc, directory):
     #print(doc['documentUuid'])
     # Full local path for downloading each document:
-    local_file = directory + item_doc['nomDocument']
+    filename = re.match(r"\S*", item_doc['libelle2']).group()
+    local_file = directory + filename
     if not os.path.isfile(local_file):
         #print("exists")
-        print("{} does not exists, downloading...".format(item_doc['nomDocument']))
+        print("{} does not exists, downloading...".format(filename))
         data = s.get(https_base_url + '/prive/telechargerremunerationpaie/v1?documentUuid=' + item_doc['documentUuid'])
         # Save file data to local copy
         with open(local_file, 'wb')as file:
